@@ -280,9 +280,8 @@ Point* findPattern(imgInfo* pImg, int pSize, int* ptrn, Point* pDst, int* fCnt);
 int main(int argc, char* argv[])
 {
 	imgInfo* pInfo;
-	int pattern1[] = { 0x40, 0x3d, 0x3d, 0x3d, 0x41, 0x7d, 0x7d, 0x43 }; 
-	int pattern2[] = { 0x3f, 0x42, 0x42, 0x42, 0x3e, 0x02, 0x02, 0x3c };
-	int pattern3[] = { 0x03, 0x1B, 0x1B, 0x1B, 0x1B, 0x00 };
+	int pattern1[] = { 0x40, 0x3d, 0x3d, 0x3d, 0x41, 0x7d, 0x7d, 0x43 }; //7, 8
+	int pattern2[] = { 0x03, 0x1B, 0x1B, 0x1B, 0x1B, 0x00 };//5, 6
 	
 	
 
@@ -291,7 +290,7 @@ int main(int argc, char* argv[])
 	
 	
 	
-	int *pattern = pattern3;
+	int *pattern = pattern1;
 	
 	
 	int pCnt, pSize, i, mask;
@@ -316,18 +315,10 @@ int main(int argc, char* argv[])
 		printf("\n");
 	}
 	
-	
-	printf("%d\n", sizeof(unsigned short));
-	printf("%d\n", sizeof(unsigned char*));
-	
-
-	
-	
-	
 
 	pts = (Point *) malloc(sizeof(Point)*512);
 
-	pSize = (5 << 16) | 6;
+	pSize = (7 << 16) | 8;
 
 
 

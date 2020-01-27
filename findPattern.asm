@@ -1,3 +1,5 @@
+;Alexander Wrzosek
+
 global findPattern
 
 section .text
@@ -29,20 +31,20 @@ section .text
 
 
 
-;[ebp - 36] - wysokosc wzorca
-;[ebp - 40] - szerokosc wzorca
+;[ebp - 36] - pattern height
+;[ebp - 40] - pattern width
 
-;[ebp - 44] - adres poczatku tablicy punktow
-;[ebp - 48] - szerokosc obrazka byte
+;[ebp - 44] - address of table of coordinates
+;[ebp - 48] - image width in bytes
 
 ;[ebp - 52] - startBMP
 
-;[ebp - 56] - szerokosc okna analizy
-;[ebp - 60] - wysokosc okna analizy
+;[ebp - 56] - analyse window width
+;[ebp - 60] - analyse window height
 
 
 
-;word [ebp - 62] - maska
+;word [ebp - 62] - mask
 
 
 findPattern:
@@ -57,19 +59,19 @@ findPattern:
 	push	edi
 	push	esi
 	
-	;zapamietanie adresu poczatku tablicy punktow na pozniej
+	;remember address of table of cords for later
 	mov		eax, [ebp + 20]
 	mov		[ebp - 44], eax
 	
-	mov		ebx, [ebp + 8]						;zaladowanie adresu obrazka
+	mov		ebx, [ebp + 8]						;load image address
 	
-	mov		eax, [ebx + 8]						;poczatek bitmapy
+	mov		eax, [ebx + 8]						;start of bitmap
 	mov		[ebp - 52], eax
 	
-	mov		eax, [ebx + 4]						;wczytanie wysokosci obrazka w pixelach
-	mov		edi, eax							;edi - wysokosc obrazka w pikselach
+	mov		eax, [ebx + 4]						;load image height in pixels
+	mov		edi, eax							;edi - image height in pixels
 	
-	mov		eax, [ebx]						;wczytanie szerokosci obrazka w pixelach
+	mov		eax, [ebx]						;load image width in pixels
 	mov		esi, eax
 
 	
@@ -79,16 +81,16 @@ findPattern:
 	shr		eax, 5
 	shl		eax, 2
 	
-	mov		[ebp - 48], eax						;zapis szerokosci obrazka w bajtach
+	mov		[ebp - 48], eax						;image width in bytes
 	
 	mov 	ecx, 0x0000FFFF
 	mov		eax, [ebp + 12]
 	mov 	ebx, eax
 	and		ebx, ecx							;int ry = pSize & 0x0000FFFF;
-	mov		[ebp - 36], ebx						;ebx - wysokosc wzorca
+	mov		[ebp - 36], ebx						;ebx - pattern height
 	
 	sub		edi, ebx
-	inc		edi									;edi - wysokosc okna analizy
+	inc		edi									;edi - analyse window height
 	mov		[ebp - 60], edi					
 	
 
@@ -102,7 +104,7 @@ findPattern:
 
 	
 ;create mask
-	mov		esi, eax							;licznik = rx
+	mov		esi, eax							;counter = rx
 	xor		edi, edi
 	inc		edi									;edi = 1
 	shl		edi, 15
@@ -120,7 +122,7 @@ create_mask_loop:
 	
 ;save patterns
 	mov		edx, 16
-	sub		edx, eax							;edx o ile przesunac w lewo aby wzorzec dosunac do lewej strony drugiego bajtu [ 4 | 3 | 2 | 1]
+	sub		edx, eax							;edx shift left to move to 2nd byte [ 4 | 3 | 2 | 1]
 	
 	mov		edi, ebx							;edi == ry
 	mov		esi, [ebp + 16]
@@ -137,26 +139,26 @@ shift_mask:
 	
 	mov		word [ebp + 2 * edi - 16 - 2], cx
 	
-	add		esi, 4								;przesuniecie na kolejny wzorzec
+	add		esi, 4								;next part of pattern
 	dec		edi
 	jnz		save_patterns_loop
 	
-;GLOWNA PETLA
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;MAIN LOOP;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 	
 	xor		edx, edx							;edx - y
 		
 	mov		edi, [ebp + 24]
-	mov		[edi], edx						;wyzerowanie licznika znalezionych wzorcow
+	mov		[edi], edx						;zero occurences counter
 	
 	
 	
-kolejna_linia:
+next_line:
 	
 	
 	mov		esi, [ebp - 52];					;esi - start BMP
-	xor		ecx, ecx							;ecx - 
-	mov		edi, [ebp - 36]						;edi - dekrementowana wysokosc wzorca
-	xor		ebx, ebx							;ebx - licznik pikseli w prawo
+	xor		ecx, ecx							
+	mov		edi, [ebp - 36]						;edi -dec pattern height
+	xor		ebx, ebx							;ebx -counter pixels right
 	;edx
 		
 	
@@ -167,56 +169,39 @@ store_data:
 	mov		word[ebp + 2 * edi - 32 - 2], ax
 	
 	
-	;xor		eax, eax
-	;mov		byte[esi + ecx], al
+	
 	add		ecx, [ebp - 48]
 	
 	dec		edi
 	jnz		store_data
-	
-	;[ebp + 2*ecx - 32 - 2]
-	
 
-
-	;;;xor		edx, edx
 	
-poziomo_z_wczytywaniem:							;#przesuniecie okna porownania w prawo o 1 piksel plus wczytywanie
-	mov		edi, [ebp - 36]						;edi - dekrementowana wysokosc wzorca
+horizontal_with_load:							;move analyse window 1 pixel right & load
+	mov		edi, [ebp - 36]						;edi - dec pattern height
 	inc		esi
-	xor		ecx, ecx							;ecx - licznik wierszach
+	xor		ecx, ecx							;ecx - line counter
 
-pionowo_z_wczytywaniem:
-	;mov		eax, [ebp + 4 * edi - 64 - 4]
+vertical_with_load:
 	mov		ax, word[ebp + 2 * edi - 32 - 2]
 	mov		al, byte[esi + ecx]
 	
 	
-	
-;	push	edx
-;	xor		dl, dl
-;	mov		byte[esi + ecx], dl
-;	pop		edx
-	
-	
 	add		ecx, [ebp - 48]
-	
-	
-	
+
 	shl		eax, 1
 	mov		word[ebp + 2 * edi - 32 - 2], ax
 	shr		eax, 1
 	
-;eax - do analizy
 
-	and		ax, word [ebp - 62]					;maskowanie danych
+	and		ax, word [ebp - 62]					;masking
 	cmp		ax, word[ebp + 2 * edi - 16 - 2]
-	jne		test_niemaskowanie_z_wczytywaniem
+	jne		test_nomask_with_load
 	dec		edi
-	jnz		pionowo_z_wczytywaniem
+	jnz		vertical_with_load
 	
 
-;zapisanie x, y znalezionego wzorca
-;edi - adres punktow
+;save x, y of found pattern
+;edi - adress of points
 	mov		edi, [ebp + 20]
 	mov		[edi], ebx
 	add		edi, 4
@@ -224,30 +209,24 @@ pionowo_z_wczytywaniem:
 	add		edi, 4
 	mov		[ebp + 20], edi
 
-;zwiekszenie licznika znalezionych punktow	
+;increase number of occurences	
 	mov		edi, [ebp + 24]
 	mov		eax, [edi]
 	inc		eax
 	mov		[edi], eax
 	
-	inc		ebx									;x += 1
+	inc		ebx									;x++
 	cmp		ebx, [ebp - 56]
-	je		test_koniec
+	je		test_end
 	
-	jmp		poziomo_bez_wczytywania
+	jmp		horizontal_no_load
 
 	
 	
-niemaskowanie_z_wczytywaniem:								
+nomask_with_load:								
 	mov		ax, word[ebp + 2 * edi - 32 - 2]
 	mov		al, byte[esi + ecx]
 	
-	
-	
-;	push	edx
-;	xor		dl, dl
-;	mov		byte[esi + ecx], dl
-;	pop		edx
 	
 	add		ecx, [ebp - 48]
 	
@@ -256,36 +235,36 @@ niemaskowanie_z_wczytywaniem:
 	mov		word[ebp + 2 * edi - 32 - 2], ax
 	shr		eax, 1
 	
-test_niemaskowanie_z_wczytywaniem:
+test_nomask_with_load:
 	dec		edi
-	jnz		niemaskowanie_z_wczytywaniem
+	jnz		nomask_with_load
 	
-	inc		ebx									;x += 1
+	inc		ebx									;x++
 	cmp		ebx, [ebp - 56]
-	je		test_koniec
+	je		test_end
 
 	
-poziomo_bez_wczytywania:						;gdy numer piksela nie jest wielokrotnoscia 8
-	mov		edi, [ebp - 36]						;edi - dekrementowana wysokosc wzorca
+horizontal_no_load:						;when number of pixels is not divisible by 8
+	mov		edi, [ebp - 36]						;edi - decremented pattern height
 	
 	
 	
-pionowo_bez_wczytywania:
+vertical_no_load:
 	mov		ax, word[ebp + 2 * edi - 32 - 2]
 	shl		eax, 1
 	mov		word[ebp + 2 * edi - 32 - 2], ax
 	shr		eax, 1
 	
-	and		ax, word [ebp - 62]					;maskowanie danych
+	and		ax, word [ebp - 62]					;mask
 	cmp		ax, [ebp + 2 * edi - 16 - 2]
-	jne		test_niemaskowanie_bez_wczytywania
+	jne		test_nomask_no_load
 	dec		edi
-	jnz		pionowo_bez_wczytywania
+	jnz		vertical_no_load
 	
 		
 
-;zapisanie x, y znalezionego wzorca
-;edi - adres punktow
+;save x, y of found occurence
+;edi - address of points
 	mov		edi, [ebp + 20]
 	mov		[edi], ebx
 	add		edi, 4
@@ -293,60 +272,60 @@ pionowo_bez_wczytywania:
 	add		edi, 4
 	mov		[ebp + 20], edi
 
-;zwiekszenie licznika znalezionych punktow	
+;increase number of occurences	
 	mov		edi, [ebp + 24]
 	mov		eax, [edi]
 	inc		eax
 	mov		[edi], eax
 	
-	inc		ebx									;x += 1
+	inc		ebx									;x++
 	cmp		ebx, [ebp - 56]
-	je		test_koniec
+	je		test_end
 	
 	
-	;sprawdzic podzielnosc przez 8
+	;check / 8
 	
 	mov		eax, ebx
 	shr		eax, 3
 	shl		eax, 3
 	cmp		eax, ebx
-	jz		poziomo_z_wczytywaniem
-	jmp		poziomo_bez_wczytywania
+	jz		horizontal_with_load
+	jmp		horizontal_no_load
 	
 	
-niemaskowanie_bez_wczytywania:								
+nomask_no_load:								
 	mov		ax, word [ebp + 2 * edi - 32 - 2]
 	shl		ax, 1
 	mov		word [ebp + 2 * edi - 32 - 2], ax
 	
-test_niemaskowanie_bez_wczytywania:
+test_nomask_no_load:
 	dec		edi
-	jnz		niemaskowanie_bez_wczytywania
+	jnz		nomask_no_load
 	
-	inc		ebx									;x += 1
+	inc		ebx									;x++
 	cmp		ebx, [ebp - 56]
-	je		test_koniec
+	je		test_end
 	
 	
 	mov		eax, ebx
 	shr		eax, 3
 	shl		eax, 3
 	cmp		eax, ebx
-	jz		poziomo_z_wczytywaniem
-	jmp		poziomo_bez_wczytywania
+	jz		horizontal_with_load
+	jmp		horizontal_no_load
 	
-test_koniec:
+test_end:
 	mov		eax, [ebp - 52]
 	add		eax, [ebp - 48]
 	mov		[ebp - 52], eax
 	
 	inc		edx
 	cmp		edx, [ebp - 60]
-	jl		kolejna_linia
+	jl		next_line
 	
 	
 	
-	;funkcja zwraca adres poczatku tablicy punktow
+	;return address of table of coordinates
 	mov		eax, [ebp - 44]
 	
 
